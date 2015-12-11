@@ -140,6 +140,7 @@ class Bundler {
     sourceMapUrl,
     dev: isDev,
     platform,
+    unbundle: isUnbundle,
   }) {
     // Const cannot have the same name as the method (babel/babel#2834)
     const bbundle = new Bundle(sourceMapUrl);
@@ -147,7 +148,7 @@ class Bundler {
     let transformEventId;
 
     const moduleSystem = this._resolver.getModuleSystemDependencies(
-      { dev: isDev, platform }
+      { dev: isDev, platform, isUnbundle }
     );
 
     return this.getDependencies(entryFile, isDev, platform).then((response) => {
@@ -168,6 +169,8 @@ class Bundler {
       }
 
       bbundle.setMainModuleId(response.mainModuleId);
+      bbundle.setNumPrependedModules(
+        response.numPrependedDependencies + moduleSystem.length);
       return Promise.all(
         dependencies.map(
           module => this._transformModule(
@@ -317,8 +320,9 @@ class Bundler {
       module,
       transformed.code
     ).then(
-      code => new ModuleTransport({
-        code: code,
+      ({code, name}) => new ModuleTransport({
+        code,
+        name,
         map: transformed.map,
         sourceCode: transformed.sourceCode,
         sourcePath: transformed.sourcePath,
@@ -360,6 +364,12 @@ class Bundler {
 
   generateAssetModule(bundle, module, platform = null) {
     const relPath = getPathRelativeToRoot(this._projectRoots, module.path);
+    var assetUrlPath = path.join('/assets', path.dirname(relPath));
+    
+    // On Windows, change backslashes to slashes to get proper URL path from file path.
+    if (path.sep === '\\') {
+      assetUrlPath = assetUrlPath.replace(/\\/g, '/');
+    }
 
     return Promise.all([
       sizeOf(module.path),
@@ -370,7 +380,7 @@ class Bundler {
       const img = {
         __packager_asset: true,
         fileSystemLocation: path.dirname(module.path),
-        httpServerLocation: path.join('/assets', path.dirname(relPath)),
+        httpServerLocation: assetUrlPath,
         width: dimensions.width / module.resolution,
         height: dimensions.height / module.resolution,
         scales: assetData.scales,

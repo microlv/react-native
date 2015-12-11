@@ -44,7 +44,7 @@ typedef void (^RCTPropBlock)(id<RCTComponent> view, id json);
   RCTShadowView *_defaultShadowView;
   NSMutableDictionary<NSString *, RCTPropBlock> *_viewPropBlocks;
   NSMutableDictionary<NSString *, RCTPropBlock> *_shadowPropBlocks;
-  RCTBridge *_bridge;
+  __weak RCTBridge *_bridge;
 }
 
 @synthesize manager = _manager;
@@ -114,7 +114,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     if ([managerClass respondsToSelector:selector]) {
       NSArray<NSString *> *typeAndKeyPath =
         ((NSArray<NSString *> *(*)(id, SEL))objc_msgSend)(managerClass, selector);
-      type = NSSelectorFromString([typeAndKeyPath[0] stringByAppendingString:@":"]);
+      type = RCTConvertSelectorForType(typeAndKeyPath[0]);
       keyPath = typeAndKeyPath.count > 1 ? typeAndKeyPath[1] : nil;
     } else {
       propBlock = ^(__unused id view, __unused id json) {};
@@ -302,6 +302,10 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   [props enumerateKeysAndObjectsUsingBlock:^(NSString *key, id json, __unused BOOL *stop) {
     [self propBlockForKey:key defaultView:_defaultView](view, json);
   }];
+
+  if ([view respondsToSelector:@selector(didSetProps:)]) {
+    [view didSetProps:[props allKeys]];
+  }
 }
 
 - (void)setProps:(NSDictionary<NSString *, id> *)props forShadowView:(RCTShadowView *)shadowView
@@ -318,7 +322,9 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     [self propBlockForKey:key defaultView:_defaultShadowView](shadowView, json);
   }];
 
-  [shadowView updateLayout];
+  if ([shadowView respondsToSelector:@selector(didSetProps:)]) {
+    [shadowView didSetProps:[props allKeys]];
+  }
 }
 
 - (NSDictionary<NSString *, id> *)viewConfig

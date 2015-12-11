@@ -117,6 +117,12 @@ var featured = [
 
 var apps = [
   {
+    name: 'Accio',
+    icon: 'http://a3.mzstatic.com/us/r30/Purple3/v4/03/a1/5b/03a15b9f-04d7-a70a-620a-9c9850a859aa/icon175x175.png',
+    link: 'https://itunes.apple.com/us/app/accio-on-demand-delivery/id1047060673?mt=8',
+    author: 'Accio Delivery Inc.',
+  },
+  {
     name: 'Beetroot',
     icon: 'http://is1.mzstatic.com/image/pf/us/r30/Purple5/v4/66/fd/dd/66fddd70-f848-4fc5-43ee-4d52197ccab8/pr_source.png',
     link: 'https://itunes.apple.com/us/app/beetroot/id1016159001?ls=1&mt=8',
@@ -205,6 +211,12 @@ var apps = [
     author: 'HS Schaaf',
   },
   {
+    name: 'Hubhopper',
+    icon: 'http://hubhopper.com/images/h_logo.jpg',
+    link: 'https://play.google.com/store/apps/details?id=com.hubhopper',
+    author: 'Soch Technologies',
+  },
+  {
     name: 'Kakapo',
     icon: 'http://a2.mzstatic.com/eu/r30/Purple3/v4/12/ab/2a/12ab2a01-3a3c-9482-b8df-ab38ad281165/icon175x175.png',
     linkAppStore: 'https://itunes.apple.com/gb/app/kakapo/id1046673139?ls=1&mt=8',
@@ -247,6 +259,18 @@ var apps = [
     icon: 'http://is5.mzstatic.com/image/pf/us/r30/Purple5/v4/51/51/68/51516875-1323-3100-31a8-cd1853d9a2c0/mzl.gozwmstp.png',
     link: 'https://itunes.apple.com/us/app/mintrain/id1015739031?mt=8',
     author: 'Peter Cottle',
+  },
+  {
+    name: 'Mobabuild',
+    icon: 'http://mobabuild.co/images/applogo.png',
+    link: 'http://mobabuild.co',
+    author: 'Sercan Demircan ( @sercanov )',
+  },
+  {
+    name: 'MockingBot',
+    icon: 'https://s3.cn-north-1.amazonaws.com.cn/modao/downloads/images/MockingBot175.png',
+    link: 'https://itunes.apple.com/cn/app/mockingbot/id1050565468?l=en&mt=8',
+    author: 'YuanYi Zhang (@mockingbot)',
   },
   {
     name: 'Mr. Dapper',

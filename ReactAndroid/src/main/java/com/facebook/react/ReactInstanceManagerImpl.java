@@ -12,10 +12,11 @@ package com.facebook.react;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -51,7 +52,7 @@ import com.facebook.react.devsupport.ReactInstanceDevCommandsHandler;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.uimanager.AppRegistry;
-import com.facebook.react.uimanager.ReactNative;
+import com.facebook.react.uimanager.UIImplementationProvider;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.ViewManager;
 import com.facebook.soloader.SoLoader;
@@ -94,7 +95,11 @@ import com.facebook.systrace.Systrace;
   private @Nullable DefaultHardwareBackBtnHandler mDefaultBackButtonImpl;
   private String mSourceUrl;
   private @Nullable Activity mCurrentActivity;
+  private final Collection<ReactInstanceEventListener> mReactInstanceEventListeners =
+      new ConcurrentLinkedQueue<>();
   private volatile boolean mHasStartedCreatingInitialContext = false;
+  private final UIImplementationProvider mUIImplementationProvider;
+  private final MemoryPressureRouter mMemoryPressureRouter;
 
   private final ReactInstanceDevCommandsHandler mDevInterface =
       new ReactInstanceDevCommandsHandler() {
@@ -189,7 +194,8 @@ import com.facebook.systrace.Systrace;
       List<ReactPackage> packages,
       boolean useDeveloperSupport,
       @Nullable NotThreadSafeBridgeIdleDebugListener bridgeIdleDebugListener,
-      LifecycleState initialLifecycleState) {
+      LifecycleState initialLifecycleState,
+      UIImplementationProvider uiImplementationProvider) {
     initializeSoLoaderIfNecessary(applicationContext);
 
     mApplicationContext = applicationContext;
@@ -208,6 +214,8 @@ import com.facebook.systrace.Systrace;
         useDeveloperSupport);
     mBridgeIdleDebugListener = bridgeIdleDebugListener;
     mLifecycleState = initialLifecycleState;
+    mUIImplementationProvider = uiImplementationProvider;
+    mMemoryPressureRouter = new MemoryPressureRouter(applicationContext);
   }
 
   @Override
@@ -393,6 +401,7 @@ import com.facebook.systrace.Systrace;
   public void onDestroy() {
     UiThreadUtil.assertOnUiThread();
 
+    mMemoryPressureRouter.destroy(mApplicationContext);
     if (mUseDeveloperSupport) {
       mDevSupportManager.setDevSupportEnabled(false);
     }
@@ -402,6 +411,7 @@ import com.facebook.systrace.Systrace;
       mCurrentReactContext = null;
       mHasStartedCreatingInitialContext = false;
     }
+    mCurrentActivity = null;
   }
 
   @Override
@@ -478,6 +488,11 @@ import com.facebook.systrace.Systrace;
     }
   }
 
+  @Override
+  public void addReactInstanceEventListener(ReactInstanceEventListener listener) {
+    mReactInstanceEventListeners.add(listener);
+  }
+
   @VisibleForTesting
   @Override
   public @Nullable ReactContext getCurrentReactContext() {
@@ -526,10 +541,15 @@ import com.facebook.systrace.Systrace;
 
     catalystInstance.initialize();
     mDevSupportManager.onNewReactContextCreated(reactContext);
+    mMemoryPressureRouter.onNewReactContextCreated(reactContext);
     moveReactContextToCurrentLifecycleState(reactContext);
 
     for (ReactRootView rootView : mAttachedRootViews) {
       attachMeasuredRootViewToInstance(rootView, catalystInstance);
+    }
+
+    for (ReactInstanceEventListener listener : mReactInstanceEventListeners) {
+      listener.onReactContextInitialized(reactContext);
     }
   }
 
@@ -560,8 +580,8 @@ import com.facebook.systrace.Systrace;
       ReactRootView rootView,
       CatalystInstance catalystInstance) {
     UiThreadUtil.assertOnUiThread();
-    catalystInstance.getJSModule(ReactNative.class)
-        .unmountComponentAtNodeAndRemoveContainer(rootView.getId());
+    catalystInstance.getJSModule(AppRegistry.class)
+        .unmountApplicationComponentAtRootTag(rootView.getId());
   }
 
   private void tearDownReactContext(ReactContext reactContext) {
@@ -574,6 +594,7 @@ import com.facebook.systrace.Systrace;
     }
     reactContext.onDestroy();
     mDevSupportManager.onReactInstanceDestroyed(reactContext);
+    mMemoryPressureRouter.onReactInstanceDestroyed();
   }
 
   /**
@@ -597,7 +618,7 @@ import com.facebook.systrace.Systrace;
         "createAndProcessCoreModulesPackage");
     try {
       CoreModulesPackage coreModulesPackage =
-          new CoreModulesPackage(this, mBackBtnHandler);
+          new CoreModulesPackage(this, mBackBtnHandler, mUIImplementationProvider);
       processPackage(coreModulesPackage, reactContext, nativeRegistryBuilder, jsModulesBuilder);
     } finally {
       Systrace.endSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE);

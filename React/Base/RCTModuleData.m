@@ -14,6 +14,12 @@
 #import "RCTLog.h"
 #import "RCTUtils.h"
 
+@interface RCTBridge (Private)
+
+- (void)registerModuleForFrameUpdates:(RCTModuleData *)moduleData;
+
+@end
+
 @implementation RCTModuleData
 {
   NSString *_queueName;
@@ -39,6 +45,8 @@
   if ((self = [super init])) {
     _instance = instance;
     _moduleClass = [instance class];
+
+    [self cacheImplementedSelectors];
   }
   return self;
 }
@@ -62,8 +70,16 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init);
 
     // Initialize queue
     [self methodQueue];
+
+    [self cacheImplementedSelectors];
   }
   return _instance;
+}
+
+- (void)cacheImplementedSelectors
+{
+  _implementsBatchDidComplete = [_instance respondsToSelector:@selector(batchDidComplete)];
+  _implementsPartialBatchDidFlush = [_instance respondsToSelector:@selector(partialBatchDidFlush)];
 }
 
 - (void)setBridgeForInstance:(RCTBridge *)bridge
@@ -78,6 +94,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init);
                   "or provide your own setter method.", self.name);
     }
   }
+  [bridge registerModuleForFrameUpdates:self];
 }
 
 - (NSString *)name
@@ -105,9 +122,9 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init);
         NSArray<NSString *> *entries =
           ((NSArray<NSString *> *(*)(id, SEL))imp)(_moduleClass, selector);
         id<RCTBridgeMethod> moduleMethod =
-          [[RCTModuleMethod alloc] initWithObjCMethodName:entries[1]
-                                             JSMethodName:entries[0]
-                                              moduleClass:_moduleClass];
+          [[RCTModuleMethod alloc] initWithMethodSignature:entries[1]
+                                              JSMethodName:entries[0]
+                                               moduleClass:_moduleClass];
 
         [moduleMethods addObject:moduleMethod];
       }
