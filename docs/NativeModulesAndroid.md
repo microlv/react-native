@@ -86,6 +86,8 @@ ReadableMap -> Object
 ReadableArray -> Array
 ```
 
+Read more about [ReadableMap](https://github.com/facebook/react-native/blob/master/ReactAndroid/src/main/java/com/facebook/react/bridge/ReadableMap.java) and [ReadableArray](https://github.com/facebook/react-native/blob/master/ReactAndroid/src/main/java/com/facebook/react/bridge/ReadableArray.java)
+
 ### Register the Module
 
 The last step within Java is to register the Module; this happens in the `createNativeModules` of your apps package. If a module is not registered it will not be available from JavaScript.
@@ -125,12 +127,7 @@ mReactInstanceManager = ReactInstanceManager.builder()
 To make it simpler to access your new functionality from JavaScript, it is common to wrap the native module in a JavaScript module. This is not necessary but saves the consumers of your library the need to pull it off of `NativeModules` each time. This JavaScript file also becomes a good location for you to add any JavaScript side functionality.
 
 ```js
-/**
- * @providesModule ToastAndroid
- */
-
 'use strict';
-
 /**
  * This exposes the native ToastAndroid module as a JS module. This has a function 'show'
  * which takes the following parameters:
@@ -142,14 +139,12 @@ var { NativeModules } = require('react-native');
 module.exports = NativeModules.ToastAndroid;
 ```
 
-Now, from your JavaScript file you can call the method like this:
+Now, from your other JavaScript file you can call the method like this:
 
 ```js
-var ToastAndroid = require('ToastAndroid')
-ToastAndroid.show('Awesome', ToastAndroid.SHORT);
+var ToastAndroid = require('./ToastAndroid');
 
-// Note: We require ToastAndroid without any relative filepath because
-// of the @providesModule directive. Using @providesModule is optional.
+ToastAndroid.show('Awesome', ToastAndroid.SHORT);
 ```
 
 ## Beyond Toasts

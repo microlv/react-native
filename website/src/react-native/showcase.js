@@ -64,6 +64,13 @@ var featured = [
     author: 'Lrn Labs, Inc',
   },
   {
+    name: 'Movie Trailers by MovieLaLa',
+    icon: 'https://lh3.googleusercontent.com/16aug4m_6tvJB7QZden9w1SOMqpZgNp7rHqDhltZNvofw1a4V_ojGGXUMPGiK0dDCqzL=w300',
+    linkAppStore: 'https://itunes.apple.com/us/app/movie-trailers-by-movielala/id1001416601?mt=8',
+    linkPlayStore: 'https://play.google.com/store/apps/details?id=com.movielala.trailers',
+    author: 'MovieLaLa'
+  },
+  {
     name: 'Myntra',
     icon: 'http://a5.mzstatic.com/us/r30/Purple6/v4/9c/78/df/9c78dfa6-0061-1af2-5026-3e1d5a073c94/icon350x350.png',
     link: 'https://itunes.apple.com/in/app/myntra-fashion-shopping-app/id907394059',
@@ -163,6 +170,18 @@ var apps = [
     author: 'Peach Labs',
   },
   {
+    name: 'Due',
+    icon: 'http://a1.mzstatic.com/us/r30/Purple69/v4/a2/41/5d/a2415d5f-407a-c565-ffb4-4f27f23d8ac2/icon175x175.png',
+    link: 'https://itunes.apple.com/us/app/due-countdown-reminders-for/id1050909468?mt=8',
+    author: 'Dotan Nahum',
+  },
+  {
+    name: 'Eat or Not',
+    icon: 'http://a3.mzstatic.com/us/r30/Purple5/v4/51/be/34/51be3462-b015-ebf2-11c5-69165b37fadc/icon175x175.jpeg',
+    link: 'https://itunes.apple.com/us/app/eat-or-not/id1054565697?mt=8',
+    author: 'Sharath Prabhal',
+  },
+  {
     name: 'Fan of it',
     icon: 'http://a4.mzstatic.com/us/r30/Purple3/v4/c9/3f/e8/c93fe8fb-9332-e744-f04a-0f4f78e42aa8/icon350x350.png',
     link: 'https://itunes.apple.com/za/app/fan-of-it/id1017025530?mt=8',
@@ -234,6 +253,12 @@ var apps = [
     icon: 'http://a2.mzstatic.com/us/r30/Purple3/v4/b5/ca/78/b5ca78ca-392d-6874-48bf-762293482d42/icon350x350.jpeg',
     link: 'https://itunes.apple.com/us/app/loaddocs/id1041596066',
     author: 'LoadDocs',
+  },
+  {
+    name: 'Lugg – Your On-Demand Mover',
+    icon: 'http://lh3.googleusercontent.com/EV9z7kRRME2KPMBRNHnje7bBNEl_Why2CFq-MfKzBC88uSFJTYr1HO3-nPt-JuVJwKFb=w300-rw',
+    link: 'https://play.google.com/store/apps/details?id=com.lugg',
+    author: 'Lugg',
   },
   {
     name: 'Lumpen Radio',
@@ -367,6 +392,12 @@ var apps = [
     icon: 'http://a1.mzstatic.com/us/r30/Purple4/v4/80/50/9d/80509d05-18f4-a0b8-0cbb-9ba927d04477/icon175x175.jpeg',
     link: 'https://itunes.apple.com/us/app/tabtor-math/id1018651199?utm_source=ParentAppLP',
     author: 'PrazAs Learning Inc.',
+  },
+  {
+    name: 'Thai Tone',
+    icon: 'http://a5.mzstatic.com/us/r30/Purple2/v4/b1/e6/2b/b1e62b3d-6747-0d0b-2a21-b6ba316a7890/icon175x175.png',
+    link: 'https://itunes.apple.com/us/app/thai-tone/id1064086189?mt=8',
+    author: 'Alexey Ledak',
   },
   {
     name: 'Tong Xing Wang',
