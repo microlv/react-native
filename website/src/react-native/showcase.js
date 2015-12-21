@@ -334,6 +334,12 @@ var apps = [
     author: 'Levi Cabral',
   },
   {
+    name: 'Pimmr',
+    icon: 'http://a2.mzstatic.com/eu/r30/Purple69/v4/99/da/0e/99da0ee6-bc87-e1a6-1d95-7027c78f50e1/icon175x175.jpeg',
+    link: 'https://itunes.apple.com/nl/app/pimmr/id1023343303?mt=8',
+    author: 'Pimmr'
+  },
+  {
     name: 'Posyt - Tinder for ideas',
     icon: 'http://a3.mzstatic.com/us/r30/Purple6/v4/a5/b3/86/a5b38618-a5e9-6089-7425-7fa51ecd5d30/icon175x175.jpeg',
     link: 'https://itunes.apple.com/us/app/posyt-anonymously-meet-right/id1037842845?mt=8',
@@ -404,6 +410,13 @@ var apps = [
     icon: 'http://a3.mzstatic.com/us/r30/Purple1/v4/7d/52/a7/7d52a71f-9532-82a5-b92f-87076624fdb2/icon175x175.jpeg',
     link: 'https://itunes.apple.com/cn/app/tong-xing-wang/id914254459?mt=8',
     author: 'Ho Yin Tsun Eugene',
+  },
+  {
+    name: 'WEARVR',
+    icon: 'http://a2.mzstatic.com/eu/r30/Purple69/v4/4f/5a/28/4f5a2876-9530-ef83-e399-c5ef5b2dab80/icon175x175.png',
+    linkAppStore: 'https://itunes.apple.com/gb/app/wearvr/id1066288171?mt=8',
+    linkPlayStore: 'https://play.google.com/store/apps/details?id=com.wearvr.app',
+    author: 'WEARVR LLC',
   },
   {
     name: 'WOOP',

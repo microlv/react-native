@@ -7,7 +7,7 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  */
 
-#import "RCTContextExecutor.h"
+#import "RCTJSCExecutor.h"
 
 #import <pthread.h>
 
@@ -46,7 +46,7 @@ static NSString *const RCTJSCProfilerEnabledDefaultsKey = @"RCTJSCProfilerEnable
     _context = context;
 
     /**
-     * Explicitly introduce a retain cycle here - The RCTContextExecutor might
+     * Explicitly introduce a retain cycle here - The RCTJSCExecutor might
      * be deallocated while there's still work enqueued in the JS thread, so
      * we wouldn't be able kill the JSContext. Instead we create this retain
      * cycle, and enqueue the -invalidate message in this object, it then
@@ -84,7 +84,7 @@ RCT_NOT_IMPLEMENTED(-(instancetype)init)
 
 @end
 
-@implementation RCTContextExecutor
+@implementation RCTJSCExecutor
 {
   RCTJavaScriptContext *_context;
   NSThread *_javaScriptThread;
@@ -119,8 +119,8 @@ static NSString *RCTJSValueToJSONString(JSContextRef context, JSValueRef value, 
 
 static NSError *RCTNSErrorFromJSError(JSContextRef context, JSValueRef jsError)
 {
-  NSString *errorMessage = jsError ? RCTJSValueToNSString(context, jsError, NULL) : @"unknown JS error";
-  NSString *details = jsError ? RCTJSValueToJSONString(context, jsError, NULL, 2) : @"no details";
+  NSString *errorMessage = jsError ? RCTJSValueToNSString(context, jsError, NULL) : @"Unknown JS error";
+  NSString *details = jsError ? RCTJSValueToJSONString(context, jsError, NULL, 2) : @"No details";
   return [NSError errorWithDomain:@"JS" code:1 userInfo:@{NSLocalizedDescriptionKey: errorMessage, NSLocalizedFailureReasonErrorKey: details}];
 }
 
@@ -186,14 +186,14 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
                                  context:(JSContext *)context
 {
   RCTAssert(javaScriptThread != nil,
-            @"Can't initialize RCTContextExecutor without a javaScriptThread");
+            @"Can't initialize RCTJSCExecutor without a javaScriptThread");
 
   if ((self = [super init])) {
     _valid = YES;
     _javaScriptThread = javaScriptThread;
-    __weak RCTContextExecutor *weakSelf = self;
+    __weak RCTJSCExecutor *weakSelf = self;
     [self executeBlockOnJavaScriptQueue: ^{
-      RCTContextExecutor *strongSelf = weakSelf;
+      RCTJSCExecutor *strongSelf = weakSelf;
       if (!strongSelf) {
         return;
       }
@@ -216,9 +216,9 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
 
 - (void)setUp
 {
-  __weak RCTContextExecutor *weakSelf = self;
+  __weak RCTJSCExecutor *weakSelf = self;
   [self executeBlockOnJavaScriptQueue:^{
-    RCTContextExecutor *strongSelf = weakSelf;
+    RCTJSCExecutor *strongSelf = weakSelf;
     if (!strongSelf.isValid) {
       return;
     }
@@ -369,9 +369,9 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
               callback:(RCTJavaScriptCallback)onComplete
 {
   RCTAssert(onComplete != nil, @"onComplete block should not be nil");
-  __weak RCTContextExecutor *weakSelf = self;
+  __weak RCTJSCExecutor *weakSelf = self;
   [self executeBlockOnJavaScriptQueue:RCTProfileBlock((^{
-    RCTContextExecutor *strongSelf = weakSelf;
+    RCTJSCExecutor *strongSelf = weakSelf;
     if (!strongSelf || !strongSelf.isValid) {
       return;
     }
@@ -394,14 +394,12 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
     JSStringRelease(moduleNameJSStringRef);
 
     if (moduleJSRef != NULL && errorJSRef == NULL && !JSValueIsUndefined(contextJSRef, moduleJSRef)) {
-
       // get method
       JSStringRef methodNameJSStringRef = JSStringCreateWithCFString((__bridge CFStringRef)method);
       JSValueRef methodJSRef = JSObjectGetProperty(contextJSRef, (JSObjectRef)moduleJSRef, methodNameJSStringRef, &errorJSRef);
       JSStringRelease(methodNameJSStringRef);
 
-      if (methodJSRef != NULL && errorJSRef == NULL) {
-
+      if (methodJSRef != NULL && errorJSRef == NULL && !JSValueIsUndefined(contextJSRef, methodJSRef)) {
         // direct method invoke with no arguments
         if (arguments.count == 0) {
           resultJSRef = JSObjectCallAsFunction(contextJSRef, (JSObjectRef)methodJSRef, (JSObjectRef)moduleJSRef, 0, NULL, &errorJSRef);
@@ -433,17 +431,28 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
             JSStringRelease(argsJSStringRef);
           }
         }
+      } else {
+        if (!errorJSRef && JSValueIsUndefined(contextJSRef, methodJSRef)) {
+          error = RCTErrorWithMessage([NSString stringWithFormat:@"Unable to execute JS call: method %@ is undefined", method]);
+        }
+      }
+    } else {
+      if (!errorJSRef && JSValueIsUndefined(contextJSRef, moduleJSRef)) {
+        error = RCTErrorWithMessage(@"Unable to execute JS call: __fbBatchedBridge is undefined");
       }
     }
 
-    if (errorJSRef) {
-      onComplete(nil, RCTNSErrorFromJSError(contextJSRef, errorJSRef));
+    if (errorJSRef || error) {
+      if (!error) {
+        error = RCTNSErrorFromJSError(contextJSRef, errorJSRef);
+      }
+      onComplete(nil, error);
       return;
     }
 
     // Looks like making lots of JSC API calls is slower than communicating by using a JSON
     // string. Also it ensures that data stuctures don't have cycles and non-serializable fields.
-    // see [RCTContextExecutorTests testDeserializationPerf]
+    // see [RCTJSCExecutorTests testDeserializationPerf]
     id objcValue;
     // We often return `null` from JS when there is nothing for native side. JSONKit takes an extra hundred microseconds
     // to handle this simple case, so we are adding a shortcut to make executeJSCall method even faster
@@ -468,9 +477,9 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
   RCTAssertParam(script);
   RCTAssertParam(sourceURL);
 
-  __weak RCTContextExecutor *weakSelf = self;
+  __weak RCTJSCExecutor *weakSelf = self;
   [self executeBlockOnJavaScriptQueue:RCTProfileBlock((^{
-    RCTContextExecutor *strongSelf = weakSelf;
+    RCTJSCExecutor *strongSelf = weakSelf;
     if (!strongSelf || !strongSelf.isValid) {
       return;
     }
@@ -532,9 +541,9 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
     RCTAssert(RCTJSONParse(script, NULL) != nil, @"%@ wasn't valid JSON!", script);
   }
 
-  __weak RCTContextExecutor *weakSelf = self;
+  __weak RCTJSCExecutor *weakSelf = self;
   [self executeBlockOnJavaScriptQueue:RCTProfileBlock((^{
-    RCTContextExecutor *strongSelf = weakSelf;
+    RCTJSCExecutor *strongSelf = weakSelf;
     if (!strongSelf || !strongSelf.isValid) {
       return;
     }
