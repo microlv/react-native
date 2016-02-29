@@ -85,6 +85,7 @@ RCT_EXPORT_MODULE()
 RCT_EXPORT_VIEW_PROPERTY(showsUserLocation, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(showsPointsOfInterest, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(showsCompass, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(followUserLocation, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(zoomEnabled, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(rotateEnabled, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(pitchEnabled, BOOL)
@@ -95,6 +96,9 @@ RCT_EXPORT_VIEW_PROPERTY(legalLabelInsets, UIEdgeInsets)
 RCT_EXPORT_VIEW_PROPERTY(mapType, MKMapType)
 RCT_EXPORT_VIEW_PROPERTY(annotations, NSArray<RCTMapAnnotation *>)
 RCT_EXPORT_VIEW_PROPERTY(overlays, NSArray<RCTMapOverlay *>)
+RCT_EXPORT_VIEW_PROPERTY(onAnnotationDragStateChange, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onAnnotationFocus, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onAnnotationBlur, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
 RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
@@ -135,8 +139,8 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
 
 - (void)mapView:(RCTMap *)mapView didSelectAnnotationView:(MKAnnotationView *)view
 {
+  // TODO: Remove deprecated onAnnotationPress API call later.
   if (mapView.onPress && [view.annotation isKindOfClass:[RCTMapAnnotation class]]) {
-
     RCTMapAnnotation *annotation = (RCTMapAnnotation *)view.annotation;
     mapView.onPress(@{
       @"action": @"annotation-click",
@@ -149,6 +153,51 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
       }
     });
   }
+
+  if ([view.annotation isKindOfClass:[RCTMapAnnotation class]]) {
+    RCTMapAnnotation *annotation = (RCTMapAnnotation *)view.annotation;
+    if (mapView.onAnnotationFocus) {
+      mapView.onAnnotationFocus(@{
+        @"annotationId": annotation.identifier
+      });
+    }
+  }
+}
+
+- (void)mapView:(RCTMap *)mapView didDeselectAnnotationView:(MKAnnotationView *)view
+{
+  if ([view.annotation isKindOfClass:[RCTMapAnnotation class]]) {
+    RCTMapAnnotation *annotation = (RCTMapAnnotation *)view.annotation;
+    if (mapView.onAnnotationBlur) {
+      mapView.onAnnotationBlur(@{
+        @"annotationId": annotation.identifier
+      });
+    }
+  }
+}
+
+- (void)mapView:(RCTMap *)mapView annotationView:(MKAnnotationView *)view
+                              didChangeDragState:(MKAnnotationViewDragState)newState
+                                    fromOldState:(MKAnnotationViewDragState)oldState
+{
+  static NSArray *states;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    states = @[@"idle", @"starting", @"dragging", @"canceling", @"ending"];
+  });
+
+  if ([view.annotation isKindOfClass:[RCTMapAnnotation class]]) {
+    RCTMapAnnotation *annotation = (RCTMapAnnotation *)view.annotation;
+    if (mapView.onAnnotationDragStateChange) {
+      mapView.onAnnotationDragStateChange(@{
+        @"state": states[newState],
+        @"oldState": states[oldState],
+        @"annotationId": annotation.identifier,
+        @"latitude": @(annotation.coordinate.latitude),
+        @"longitude": @(annotation.coordinate.longitude),
+      });
+    }
+  }
 }
 
 - (MKAnnotationView *)mapView:(RCTMap *)mapView
@@ -159,7 +208,6 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
   }
 
   MKAnnotationView *annotationView;
-  annotationView.clipsToBounds = YES;
   if (annotation.viewIndex != NSNotFound) {
 
     NSString *reuseIdentifier = NSStringFromClass([RCTMapAnnotationView class]);
@@ -205,7 +253,7 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
         annotation.tintColor ?: [MKPinAnnotationView redPinColor];
     }
   }
-  annotationView.canShowCallout = true;
+  annotationView.canShowCallout = (annotation.title.length > 0);
 
   if (annotation.leftCalloutViewIndex != NSNotFound) {
     annotationView.leftCalloutAccessoryView =
@@ -255,6 +303,8 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
     }
   }
 
+  annotationView.draggable = annotation.draggable;
+
   return annotationView;
 }
 
@@ -295,9 +345,6 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, RCTMap)
     region.span.longitudeDelta = RCTMapDefaultSpan;
     region.center = location.coordinate;
     [mapView setRegion:region animated:YES];
-
-    // Move to user location only for the first time it loads up.
-    mapView.followUserLocation = NO;
   }
 }
 
