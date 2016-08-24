@@ -113,8 +113,6 @@ static NSDictionary<NSString *, id> *RCTPositionError(RCTPositionErrorCode code,
 
 RCT_EXPORT_MODULE()
 
-@synthesize bridge = _bridge;
-
 #pragma mark - Lifecycle
 
 - (void)dealloc
@@ -128,13 +126,17 @@ RCT_EXPORT_MODULE()
   return dispatch_get_main_queue();
 }
 
+- (NSArray<NSString *> *)supportedEvents
+{
+  return @[@"geolocationDidChange", @"geolocationError"];
+}
+
 #pragma mark - Private API
 
-- (void)beginLocationUpdates
+- (void)beginLocationUpdatesWithDesiredAccuracy:(CLLocationAccuracy)desiredAccuracy distanceFilter:(CLLocationDistance)distanceFilter
 {
   if (!_locationManager) {
     _locationManager = [CLLocationManager new];
-    _locationManager.distanceFilter = _observerOptions.distanceFilter;
     _locationManager.delegate = self;
   }
 
@@ -147,6 +149,8 @@ RCT_EXPORT_MODULE()
     [_locationManager requestWhenInUseAuthorization];
   }
 
+  _locationManager.distanceFilter  = distanceFilter;
+  _locationManager.desiredAccuracy = desiredAccuracy;
   // Start observing location
   [_locationManager startUpdatingLocation];
 }
@@ -170,7 +174,7 @@ RCT_EXPORT_MODULE()
 
 RCT_EXPORT_METHOD(startObserving:(RCTLocationOptions)options)
 {
-  [self checkLocationConfig];
+  checkLocationConfig();
 
   // Select best options
   _observerOptions = options;
@@ -178,8 +182,7 @@ RCT_EXPORT_METHOD(startObserving:(RCTLocationOptions)options)
     _observerOptions.accuracy = MIN(_observerOptions.accuracy, request.options.accuracy);
   }
 
-  _locationManager.desiredAccuracy = _observerOptions.accuracy;
-  [self beginLocationUpdates];
+  [self beginLocationUpdatesWithDesiredAccuracy:_observerOptions.accuracy distanceFilter:_observerOptions.distanceFilter];
   _observingLocation = YES;
 }
 
@@ -198,7 +201,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
                   withSuccessCallback:(RCTResponseSenderBlock)successBlock
                   errorCallback:(RCTResponseSenderBlock)errorBlock)
 {
-  [self checkLocationConfig];
+  checkLocationConfig();
 
   if (!successBlock) {
     RCTLogError(@"%@.getCurrentPosition called with nil success parameter.", [self class]);
@@ -225,8 +228,8 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
 
   // Check if previous recorded location exists and is good enough
   if (_lastLocationEvent &&
-      CFAbsoluteTimeGetCurrent() - [RCTConvert NSTimeInterval:_lastLocationEvent[@"timestamp"]] < options.maximumAge &&
-      [_lastLocationEvent[@"coords"][@"accuracy"] doubleValue] >= options.accuracy) {
+      [NSDate date].timeIntervalSince1970 - [RCTConvert NSTimeInterval:_lastLocationEvent[@"timestamp"]] < options.maximumAge &&
+      [_lastLocationEvent[@"coords"][@"accuracy"] doubleValue] <= options.accuracy) {
 
     // Call success block with most recent known location
     successBlock(@[_lastLocationEvent]);
@@ -249,8 +252,11 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
   [_pendingRequests addObject:request];
 
   // Configure location manager and begin updating location
-  _locationManager.desiredAccuracy = MIN(_locationManager.desiredAccuracy, options.accuracy);
-  [self beginLocationUpdates];
+  CLLocationAccuracy accuracy = options.accuracy;
+  if (_locationManager) {
+    accuracy = MIN(_locationManager.desiredAccuracy, accuracy);
+  }
+  [self beginLocationUpdatesWithDesiredAccuracy:accuracy distanceFilter:options.distanceFilter];
 }
 
 #pragma mark - CLLocationManagerDelegate
@@ -275,8 +281,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
 
   // Send event
   if (_observingLocation) {
-    [_bridge.eventDispatcher sendDeviceEventWithName:@"geolocationDidChange"
-                                                body:_lastLocationEvent];
+    [self sendEventWithName:@"geolocationDidChange" body:_lastLocationEvent];
   }
 
   // Fire all queued callbacks
@@ -286,7 +291,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
   }
   [_pendingRequests removeAllObjects];
 
-  // Stop updating if not not observing
+  // Stop updating if not observing
   if (!_observingLocation) {
     [_locationManager stopUpdatingLocation];
   }
@@ -317,8 +322,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
 
   // Send event
   if (_observingLocation) {
-    [_bridge.eventDispatcher sendDeviceEventWithName:@"geolocationError"
-                                                body:jsError];
+    [self sendEventWithName:@"geolocationError" body:jsError];
   }
 
   // Fire all queued error callbacks
@@ -335,12 +339,14 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
   }
 }
 
-- (void)checkLocationConfig
+static void checkLocationConfig()
 {
+#if RCT_DEV
   if (!([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationWhenInUseUsageDescription"] ||
     [[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationAlwaysUsageDescription"])) {
     RCTLogError(@"Either NSLocationWhenInUseUsageDescription or NSLocationAlwaysUsageDescription key must be present in Info.plist to use geolocation.");
   }
+#endif
 }
 
 @end

@@ -15,7 +15,7 @@ var ReactNativeStyleAttributes = require('ReactNativeStyleAttributes');
 var UIManager = require('UIManager');
 var UnimplementedView = require('UnimplementedView');
 
-var createReactNativeComponentClass = require('createReactNativeComponentClass');
+var createReactNativeComponentClass = require('react/lib/createReactNativeComponentClass');
 
 var insetsDiffer = require('insetsDiffer');
 var pointsDiffer = require('pointsDiffer');
@@ -24,7 +24,7 @@ var processColor = require('processColor');
 var resolveAssetSource = require('resolveAssetSource');
 var sizesDiffer = require('sizesDiffer');
 var verifyPropTypes = require('verifyPropTypes');
-var warning = require('warning');
+var warning = require('fbjs/lib/warning');
 
 /**
  * Used to create React components that directly wrap native component
